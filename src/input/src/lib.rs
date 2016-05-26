@@ -10,9 +10,9 @@ extern crate bitflags;
 extern crate rustc_serialize;
 extern crate viewport;
 
-pub use mouse::MouseButton;
-pub use keyboard::Key;
 pub use controller::{ ControllerAxisArgs, ControllerButton };
+pub use keyboard::Key;
+pub use mouse::MouseButton;
 
 pub mod controller;
 pub mod keyboard;
@@ -50,6 +50,7 @@ mod touch;
 mod update;
 
 /// Used to identify events arguments provided by traits.
+// TODO: What...?
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub struct EventId(pub &'static str);
 
@@ -69,7 +70,7 @@ const TEXT: EventId = EventId("piston/text");
 const TOUCH: EventId = EventId("piston/touch");
 const UPDATE: EventId = EventId("piston/update");
 
-/// Models different kinds of buttons.
+/// Models each kind of button that might be used by a backend.
 #[derive(Copy, Clone, RustcDecodable, RustcEncodable, PartialEq, Eq, Hash, Debug)]
 pub enum Button {
     /// A keyboard button.
@@ -80,66 +81,91 @@ pub enum Button {
     Controller(ControllerButton),
 }
 
-/// Models different kinds of motion.
+/// Models each kind of input motion, from mouse pointers to joysticks.
 #[derive(Copy, Clone, RustcDecodable, RustcEncodable, PartialEq, Debug)]
 pub enum Motion {
-    /// x and y in window coordinates.
+    /// Gives the mouse position (x, y) in window coordinates.
     MouseCursor(f64, f64),
-    /// x and y in relative coordinates.
+    
+    /// Gives the mouse position (x, y) in relative coordinates.
+    // TODO: Relative to what?
     MouseRelative(f64, f64),
-    /// x and y in scroll ticks.
+    
+    /// Gives the scroll bar position for x and y directions
+    /// in scroll ticks.
+    // TODO: What controlls tick size?
     MouseScroll(f64, f64),
-    /// controller axis move event.
+    
+    /// Used when the axis of a joystick or a controller's analog stick moves.
     ControllerAxis(ControllerAxisArgs),
-    /// touch event.
+    
+    /// Used for touch events.
     Touch(TouchArgs),
 }
 
-/// Models input events.
+/// Models piston's default input events.
+///
+/// Most backends will use this enum instead of providing their own input-handling
+/// enum. It's used during the Event Loop.
+// TODO: How to link to the event loop? ../event_loop/index.html is broken if
+//       documentation is only built for the input module.
 #[derive(Clone, RustcDecodable, RustcEncodable, PartialEq, Debug)]
 pub enum Input {
-    /// Pressed a button.
+    /// The user pressed a button.
     Press(Button),
-    /// Released a button.
+    /// The user released a button.
     Release(Button),
-    /// Moved mouse cursor.
+    /// The user moved the mouse cursor, a joystick, or there was a touch event.
     Move(Motion),
-    /// Text (usually from keyboard).
+    /// Text. This will usually be full unicode or characters, as opposed to single
+    /// keypresses. May also be used by backends that don't support individual
+    /// key presses.
     Text(String),
-    /// Window got resized.
+    /// The window was resized. Gives the new (height, width) in pixels.
     Resize(u32, u32),
-    /// Window gained or lost focus.
+    /// If true, the window gained focus.
     Focus(bool),
-    /// Window gained or lost cursor.
+    /// If true, the cursor just entered the window area. Otherwise, the cursor just
+    /// left the window area.
     Cursor(bool),
 }
 
+/// Convenience method for making a Button wrapper around a key input.
 impl From<Key> for Button {
     fn from(key: Key) -> Self {
         Button::Keyboard(key)
     }
 }
 
+/// Convinience method for making a Button wrapper around a mouse input.
 impl From<MouseButton> for Button {
     fn from(btn: MouseButton) -> Self {
         Button::Mouse(btn)
     }
 }
 
+/// Convinience method for making a Button wrapper around a controller input.
 impl From<ControllerButton> for Button {
     fn from(btn: ControllerButton) -> Self {
         Button::Controller(btn)
     }
 }
 
+/// Convinience method for making a Motion wrapper around a controller axis input.
 impl From<ControllerAxisArgs> for Motion {
     fn from(args: ControllerAxisArgs) -> Self {
         Motion::ControllerAxis(args)
     }
 }
 
+/// Convinience method for making an Input event around a Motion event.
 impl From<Motion> for Input {
     fn from(motion: Motion) -> Self {
         Input::Move(motion)
     }
 }
+
+// TOTO: It seems like the conversions are arbitrary... it should probably be all
+//       the conversions the user could want, or no conversions.
+
+

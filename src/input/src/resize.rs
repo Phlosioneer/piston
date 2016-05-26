@@ -2,24 +2,50 @@ use std::any::Any;
 
 use { GenericEvent, RESIZE };
 
-/// When the window is resized
+/// An event that is triggered when the window is resized.
 pub trait ResizeEvent: Sized {
-    /// Creates a resize event.
+    /// Creates a `ResizeEvent`.
     fn from_width_height(w: u32, h: u32, old_event: &Self) -> Option<Self>;
-    /// Calls closure if this is a resize event.
+    
+    /// Maps a function onto this event, if this is a mouse event.
+    ///
+    /// Calls closure if the event is a mouse event, and is not None.
+    /// The closure will be given the (x, y) coordinates of the mouse.
+    /// Returns None if the event is None, or if the event encodes a
+    /// different type of event.
     fn resize<U, F>(&self, f: F) -> Option<U>
         where F: FnMut(u32, u32) -> U;
-    /// Returns resize arguments.
+    
+    /// If this is a `ResizeEvent`, returns the new (width, height).
+    ///
+    /// Otherwise, returns None.
+    ///
+    /// #Errors
+    ///
+    /// Panics if `resize` panics.
     fn resize_args(&self) -> Option<[u32; 2]> {
         self.resize(|x, y| [x, y])
     }
 }
 
 impl<T: GenericEvent> ResizeEvent for T {
+	/// Creates a `ResizeEvent`.
     fn from_width_height(w: u32, h: u32, old_event: &Self) -> Option<Self> {
         GenericEvent::from_args(RESIZE, &(w, h) as &Any, old_event)
     }
-
+	
+	/// Maps a function onto this event, if this is a mouse event.
+    ///
+    /// Calls closure if the event is a mouse event, and is not None.
+    /// The closure will be given the (x, y) coordinates of the mouse.
+    /// Returns None if the event is None, or if the event encodes a
+    /// different type of event.
+    ///
+    /// #Errors
+	///
+	/// Panics if the event doesn't contain an (x,y) pair. This panic is
+	/// only possible because the type information for the contained data is
+	/// erased via `std::any::Any`.
     fn resize<U, F>(&self, mut f: F) -> Option<U>
         where F: FnMut(u32, u32) -> U
     {

@@ -3,24 +3,47 @@ use std::any::Any;
 
 use { GenericEvent, TEXT };
 
-/// When receiving text from user, such as typing a character
+/// An event that gives text from user, such as a character.
 pub trait TextEvent: Sized {
-    /// Creates a text event.
+    /// Creates a `TextEvent`.
     fn from_text(text: &str, old_event: &Self) -> Option<Self>;
-    /// Calls closure if this is a text event.
+    
+    /// Maps a function onto this event, if this is a `TextEvent`.
+    ///
+    /// Calls closure if the event is a `TextEvent`, and is not None.
+    /// The closure will be given the (x, y) coordinates of the mouse.
+    /// Returns None if the event is None, or if the event encodes a
+    /// different type of event.
     fn text<U, F>(&self, f: F) -> Option<U>
         where F: FnMut(&str) -> U;
-    /// Returns text arguments.
+    
+    /// Returns text string if this is a `TextEvent`.
+    ///
+    /// #Panics
+    ///
+    /// Panics if `text` would panic.
     fn text_args(&self) -> Option<String> {
         self.text(|text| text.to_owned())
     }
 }
 
 impl<T: GenericEvent> TextEvent for T {
+	/// Creates a `TextEvent`.
+	///
+	/// Never returns None.
     fn from_text(text: &str, old_event: &Self) -> Option<Self> {
         GenericEvent::from_args(TEXT, &text.to_owned() as &Any, old_event)
     }
-
+	
+	/// Maps a function onto this event, if this is a `TextEvent`.
+	/// 
+	/// Returns None if and only if this is not a `TextEvent`.
+	///
+	/// #Panics
+	///
+	/// Panics if the event doesn't contain a string. This panic is
+	/// only possible because the type information for the contained data is
+	/// erased via `std::any::Any`.
     fn text<U, F>(&self, mut f: F) -> Option<U>
         where F: FnMut(&str) -> U
     {
